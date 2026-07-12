@@ -86,7 +86,9 @@ public final class UpdatePruefer {
     // ------------------------------------------------------------------ HTTP
 
     private static String hole(String url) throws Exception {
-        HttpClient c = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(6)).build();
+        HttpClient c = HttpClient.newBuilder()
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .connectTimeout(Duration.ofSeconds(6)).build();
         HttpRequest r = HttpRequest.newBuilder(URI.create(url))
                 .timeout(Duration.ofSeconds(8))
                 .header("Accept", "application/vnd.github+json")
@@ -184,9 +186,12 @@ public final class UpdatePruefer {
                 Path tmp = Files.createTempDirectory("kv-update");
                 Path zip = tmp.resolve("KundenVerwaltung-Setup.zip");
 
-                HttpClient c = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+                HttpClient c = HttpClient.newBuilder()
+                        .followRedirects(HttpClient.Redirect.NORMAL)   // GitHub-Assets leiten weiter (302)
+                        .connectTimeout(Duration.ofSeconds(10)).build();
                 HttpRequest r = HttpRequest.newBuilder(URI.create(zipUrl))
                         .header("User-Agent", "KundenVerwaltung-Updater")
+                        .header("Accept", "application/octet-stream")
                         .timeout(Duration.ofMinutes(5)).GET().build();
                 HttpResponse<Path> resp = c.send(r, HttpResponse.BodyHandlers.ofFile(zip));
                 if (resp.statusCode() != 200) throw new RuntimeException("HTTP " + resp.statusCode());
@@ -204,10 +209,12 @@ public final class UpdatePruefer {
                     System.exit(0);
                 });
             } catch (Exception e) {
+                System.err.println("Auto-Update fehlgeschlagen: " + e);
+                String grund = e.getMessage() == null ? e.toString() : e.getMessage();
                 Platform.runLater(() -> {
                     p.close();
                     Alert a = new Alert(Alert.AlertType.ERROR,
-                            "Das automatische Update ist fehlgeschlagen.\n"
+                            "Das automatische Update ist fehlgeschlagen.\n(" + grund + ")\n\n"
                             + "Möchten Sie die Download-Seite im Browser öffnen?",
                             ButtonType.YES, ButtonType.NO);
                     a.setTitle("Aktualisierung");
