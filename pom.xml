@@ -7,7 +7,7 @@
 
     <groupId>de.reinheit</groupId>
     <artifactId>KundenVerwaltung</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
     <packaging>jar</packaging>
 
     <name>KundenVerwaltung</name>
