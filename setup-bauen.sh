@@ -46,6 +46,7 @@ jpackage \
   --main-jar "${STABIL}" \
   --main-class "${MAIN_CLASS}" \
   --java-options "-Dfile.encoding=UTF-8" \
+  --java-options "-Djava.net.useSystemProxies=true" \
   ${ICON_OPT} \
   --dest dist
 

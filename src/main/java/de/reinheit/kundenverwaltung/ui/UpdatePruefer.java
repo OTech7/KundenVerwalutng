@@ -16,6 +16,7 @@ import javafx.stage.Stage;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.ProxySelector;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -41,6 +42,11 @@ public final class UpdatePruefer {
     // │ genau wie in der GitHub-Adresse (Groß-/Kleinschreibung beachten).  │
     // └──────────────────────────────────────────────────────────────────┘
     private static final String REPO = "OTech7/KundenVerwalutng";
+
+    static {
+        // Damit die App denselben Proxy/VPN nutzt wie der Browser (Windows-Einstellungen).
+        System.setProperty("java.net.useSystemProxies", "true");
+    }
 
     private UpdatePruefer() {}
 
@@ -94,6 +100,7 @@ public final class UpdatePruefer {
         HttpClient c = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)          // vermeidet "Connection reset" (HTTP/2)
                 .followRedirects(HttpClient.Redirect.NORMAL)
+                .proxy(ProxySelector.getDefault())             // System-/VPN-Proxy nutzen (wie der Browser)
                 .connectTimeout(Duration.ofSeconds(6)).build();
         HttpRequest r = HttpRequest.newBuilder(URI.create(url))
                 .timeout(Duration.ofSeconds(8))
@@ -236,6 +243,7 @@ public final class UpdatePruefer {
         HttpClient c = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
                 .followRedirects(HttpClient.Redirect.NORMAL)
+                .proxy(ProxySelector.getDefault())             // System-/VPN-Proxy nutzen (wie der Browser)
                 .connectTimeout(Duration.ofSeconds(15)).build();
 
         long erwartet = -1;
