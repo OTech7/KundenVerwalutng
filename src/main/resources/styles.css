@@ -1,0 +1,71 @@
+/* Palette aus dem Firmenlogo abgeleitet:
+   Primär  #01AAF0  ·  Dunkel #0088C0  ·  Dunkler #006E9C
+   Hell    #E0F4FD  ·  Heller #EFF9FE */
+
+.root-pane { -fx-background-color: #EFF9FE; }
+
+.sidebar {
+    -fx-background-color: linear-gradient(to bottom, #01AAF0, #0088C0);
+}
+.logo-card {
+    -fx-background-color: white;
+    -fx-background-radius: 10;
+    -fx-padding: 10 12 10 12;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 8, 0, 0, 2);
+}
+.logo-name { -fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: bold; }
+.logo-sub  { -fx-text-fill: #d6f0fb; -fx-font-size: 11px; -fx-padding: 0 0 0 2; }
+
+.nav-button {
+    -fx-background-color: transparent; -fx-text-fill: #eaf7fe;
+    -fx-font-size: 14px; -fx-padding: 10 14 10 14;
+    -fx-background-radius: 8; -fx-cursor: hand;
+}
+.nav-button:hover { -fx-background-color: rgba(255,255,255,0.16); }
+
+.content { -fx-background-color: #EFF9FE; }
+
+.primary {
+    -fx-background-color: #01AAF0; -fx-text-fill: white;
+    -fx-font-weight: bold; -fx-background-radius: 8; -fx-cursor: hand;
+    -fx-padding: 8 16 8 16;
+}
+.primary:hover { -fx-background-color: #0088C0; }
+
+.toggle-button:selected {
+    -fx-background-color: #E0F4FD; -fx-text-fill: #006E9C;
+    -fx-border-color: #01AAF0; -fx-border-radius: 4; -fx-background-radius: 4;
+}
+
+.table-view { -fx-background-radius: 10; -fx-border-color: #d4e9f5; -fx-border-radius: 10; }
+.table-view .column-header-background { -fx-background-color: #EFF9FE; }
+.table-view .column-header .label { -fx-text-fill: #006E9C; -fx-font-weight: bold; }
+.table-row-cell:selected { -fx-background-color: #E0F4FD; -fx-text-fill: #0f172a; }
+
+.platzhalter { -fx-font-size: 13px; -fx-text-fill: #5b7a8a; }
+
+/* Dialog-Akzente */
+.dialog-pane { -fx-background-color: white; }
+.dialog-pane .header-panel { -fx-background-color: #E0F4FD; }
+
+/* ---------- Anmeldung / Registrierung ---------- */
+.auth-bg {
+    -fx-background-color: linear-gradient(to bottom right, #01AAF0, #0088C0);
+}
+.auth-card {
+    -fx-background-color: white;
+    -fx-background-radius: 16;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 24, 0, 0, 8);
+}
+.auth-card .text-field, .auth-card .password-field, .auth-card .combo-box {
+    -fx-pref-width: 300;
+    -fx-pref-height: 38;
+    -fx-background-radius: 8;
+    -fx-border-color: #d4e9f5; -fx-border-radius: 8;
+}
+.auth-title { -fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #006E9C; }
+.auth-label { -fx-text-fill: #5b7a8a; -fx-font-size: 12px; }
+.auth-hint  { -fx-text-fill: #94a3b8; -fx-font-size: 11px; }
+.auth-error   { -fx-text-fill: #dc2626; -fx-font-size: 12.5px; }
+.auth-success { -fx-text-fill: #16a34a; -fx-font-size: 12.5px; }
+.auth-card .hyperlink { -fx-text-fill: #0088C0; -fx-border-color: transparent; }

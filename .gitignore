@@ -1,0 +1,18 @@
+# Build-Ausgaben
+target/
+dist/
+build-input/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Datenbank & Schlüssel (NIEMALS committen!)
+*.db
+*.db-journal
+kunden.key
+
+# Betriebssystem
+.DS_Store
+Thumbs.db
