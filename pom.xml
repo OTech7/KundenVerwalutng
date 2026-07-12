@@ -84,6 +84,25 @@
     </dependencies>
 
     <build>
+        <!-- version.properties bekommt die Projektversion eingesetzt;
+             Bilder u. a. bleiben ungefiltert (sonst würden sie beschädigt). -->
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <excludes>
+                    <exclude>version.properties</exclude>
+                </excludes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>version.properties</include>
+                </includes>
+            </resource>
+        </resources>
+
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

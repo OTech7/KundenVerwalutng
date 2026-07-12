@@ -81,9 +81,10 @@ public class Hauptfenster {
             side.getChildren().add(user);
         }
 
+        Button updates = navButton("🔄  Nach Updates suchen", UpdatePruefer::pruefeManuell);
         Button abmelden = navButton("🔓  Abmelden", () -> { if (onAbmelden != null) onAbmelden.run(); });
         Button beenden = navButton("⛔  Beenden", () -> System.exit(0));
-        side.getChildren().addAll(abmelden, beenden);
+        side.getChildren().addAll(updates, abmelden, beenden);
 
         root.setLeft(side);
 
@@ -94,6 +95,9 @@ public class Hauptfenster {
 
         // Startansicht: Dashboard
         zeige(new DashboardFenster().getRoot());
+
+        // Im Hintergrund auf neue Version prüfen (GitHub-Release)
+        UpdatePruefer.pruefeImHintergrund();
     }
 
     private Button navButton(String text, Runnable action) {

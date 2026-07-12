@@ -13,7 +13,10 @@
 # ---------------------------------------------------------------
 set -e
 
-VERSION="1.0.0"
+# Version automatisch aus pom.xml lesen (erste <version>…</version>-Zeile)
+VERSION=$(sed -n 's:.*<version>\(.*\)</version>.*:\1:p' pom.xml | head -1)
+[ -z "$VERSION" ] && VERSION="1.0.0"
+echo "==> Version laut pom.xml: ${VERSION}"
 JAR="KundenVerwaltung-${VERSION}-app.jar"
 MAIN_CLASS="de.reinheit.kundenverwaltung.Launcher"
 PAKET="dist/KundenVerwaltung-Setup"
