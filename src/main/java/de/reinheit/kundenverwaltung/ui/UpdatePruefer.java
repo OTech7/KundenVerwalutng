@@ -13,12 +13,16 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -61,7 +65,8 @@ public final class UpdatePruefer {
                 }
                 String tag = feld(json, "tag_name");
                 String seiteUrl = feld(json, "html_url");
-                String zipUrl = zipDownloadUrl(json);
+                String jarUrl = assetUrl(json, "app\\.jar");   // kleines Update (~wenige MB)
+                String zipUrl = assetUrl(json, "\\.zip");      // voller Installer (Rückfall)
                 if (tag == null) {
                     if (mitRueckmeldung) zeigeInfo("Es wurde noch keine Version veröffentlicht.");
                     return;
@@ -70,7 +75,7 @@ public final class UpdatePruefer {
                 String seite = (seiteUrl != null && !seiteUrl.isBlank())
                         ? seiteUrl : "https://github.com/" + REPO + "/releases/latest";
                 if (istNeuer(neu, Version.aktuell())) {
-                    Platform.runLater(() -> zeigeHinweis(neu, seite, zipUrl));
+                    Platform.runLater(() -> zeigeHinweis(neu, seite, jarUrl, zipUrl));
                 } else if (mitRueckmeldung) {
                     zeigeInfo("Sie verwenden bereits die aktuelle Version " + Version.aktuell() + ".");
                 }
@@ -105,9 +110,9 @@ public final class UpdatePruefer {
         return m.find() ? m.group(1) : null;
     }
 
-    /** Sucht die Download-Adresse der angehängten .zip-Datei. */
-    private static String zipDownloadUrl(String json) {
-        Matcher m = Pattern.compile("\"browser_download_url\"\\s*:\\s*\"([^\"]*\\.zip)\"").matcher(json);
+    /** Sucht die Download-Adresse eines Anhangs, dessen Name auf 'endungRegex' endet. */
+    private static String assetUrl(String json, String endungRegex) {
+        Matcher m = Pattern.compile("\"browser_download_url\"\\s*:\\s*\"([^\"]*" + endungRegex + ")\"").matcher(json);
         return m.find() ? m.group(1) : null;
     }
 
@@ -139,7 +144,7 @@ public final class UpdatePruefer {
         });
     }
 
-    private static void zeigeHinweis(String neu, String seite, String zipUrl) {
+    private static void zeigeHinweis(String neu, String seite, String jarUrl, String zipUrl) {
         ButtonType jetzt = new ButtonType("Jetzt aktualisieren", ButtonBar.ButtonData.OK_DONE);
         ButtonType spaeter = new ButtonType("Später", ButtonBar.ButtonData.CANCEL_CLOSE);
         Alert a = new Alert(Alert.AlertType.CONFIRMATION,
@@ -149,7 +154,7 @@ public final class UpdatePruefer {
         a.setTitle("Aktualisierung");
         a.setHeaderText("Neue Version verfügbar");
         a.showAndWait().ifPresent(bt -> {
-            if (bt == jetzt) automatischAktualisieren(zipUrl, seite);
+            if (bt == jetzt) automatischAktualisieren(jarUrl, zipUrl, seite);
         });
     }
 
@@ -165,9 +170,12 @@ public final class UpdatePruefer {
         }
     }
 
-    private static void automatischAktualisieren(String zipUrl, String seite) {
-        // Ohne Windows oder ohne ZIP-Adresse: einfach die Seite im Browser öffnen.
-        if (zipUrl == null || zipUrl.isBlank() || !istWindows()) { oeffneBrowser(seite); return; }
+    private static void automatischAktualisieren(String jarUrl, String zipUrl, String seite) {
+        if (!istWindows()) { oeffneBrowser(seite); return; }
+        // Bevorzugt das kleine JAR-Update (~wenige MB); sonst der volle Installer.
+        boolean nurJar = jarUrl != null && !jarUrl.isBlank();
+        String url = nurJar ? jarUrl : zipUrl;
+        if (url == null || url.isBlank()) { oeffneBrowser(seite); return; }
 
         Stage p = new Stage();
         p.initModality(Modality.APPLICATION_MODAL);
@@ -185,20 +193,11 @@ public final class UpdatePruefer {
         Thread t = new Thread(() -> {
             try {
                 Path tmp = Files.createTempDirectory("kv-update");
-                Path zip = tmp.resolve("KundenVerwaltung-Setup.zip");
+                Path datei = tmp.resolve(nurJar ? "KundenVerwaltung-app.jar" : "KundenVerwaltung-Setup.zip");
 
-                HttpClient c = HttpClient.newBuilder()
-                        .version(HttpClient.Version.HTTP_1_1)          // vermeidet "Connection reset" (HTTP/2)
-                        .followRedirects(HttpClient.Redirect.NORMAL)   // GitHub-Assets leiten weiter (302)
-                        .connectTimeout(Duration.ofSeconds(10)).build();
-                HttpRequest r = HttpRequest.newBuilder(URI.create(zipUrl))
-                        .header("User-Agent", "KundenVerwaltung-Updater")
-                        .header("Accept", "application/octet-stream")
-                        .timeout(Duration.ofMinutes(5)).GET().build();
-                HttpResponse<Path> resp = c.send(r, HttpResponse.BodyHandlers.ofFile(zip));
-                if (resp.statusCode() != 200) throw new RuntimeException("HTTP " + resp.statusCode());
+                ladeMitFortsetzung(url, datei);
 
-                Path batch = schreibeUpdaterBatch(tmp, zip);
+                Path batch = nurJar ? schreibeJarUpdater(tmp, datei) : schreibeUpdaterBatch(tmp, datei);
 
                 Platform.runLater(() -> {
                     try {
@@ -227,6 +226,95 @@ public final class UpdatePruefer {
         }, "update-download");
         t.setDaemon(true);
         t.start();
+    }
+
+    /**
+     * Lädt eine (große) Datei herunter und setzt bei Verbindungsabbrüchen mit
+     * HTTP-Range fort, statt komplett neu zu beginnen. Bis zu 8 Versuche.
+     */
+    private static void ladeMitFortsetzung(String url, Path ziel) throws Exception {
+        HttpClient c = HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .connectTimeout(Duration.ofSeconds(15)).build();
+
+        long erwartet = -1;
+        Exception letzter = null;
+
+        for (int versuch = 1; versuch <= 8; versuch++) {
+            long vorhanden = Files.exists(ziel) ? Files.size(ziel) : 0;
+            if (erwartet > 0 && vorhanden >= erwartet) return;   // schon vollständig
+
+            HttpRequest.Builder rb = HttpRequest.newBuilder(URI.create(url))
+                    .header("User-Agent", "KundenVerwaltung-Updater")
+                    .header("Accept", "application/octet-stream")
+                    .timeout(Duration.ofMinutes(10)).GET();
+            if (vorhanden > 0) rb.header("Range", "bytes=" + vorhanden + "-");
+
+            try {
+                HttpResponse<InputStream> resp = c.send(rb.build(), HttpResponse.BodyHandlers.ofInputStream());
+                int sc = resp.statusCode();
+
+                if (sc == 200 && vorhanden > 0) {          // Server ignoriert Range -> neu beginnen
+                    Files.deleteIfExists(ziel);
+                    vorhanden = 0;
+                } else if (sc != 200 && sc != 206) {
+                    throw new RuntimeException("HTTP " + sc);
+                }
+
+                if (sc == 200) {
+                    erwartet = resp.headers().firstValueAsLong("Content-Length").orElse(erwartet);
+                } else { // 206: Gesamtgröße aus "Content-Range: bytes a-b/total"
+                    erwartet = resp.headers().firstValue("Content-Range")
+                            .map(v -> { try { return Long.parseLong(v.substring(v.indexOf('/') + 1).trim()); }
+                                        catch (Exception e) { return -1L; } })
+                            .filter(x -> x > 0).orElse(erwartet);
+                }
+
+                try (InputStream in = resp.body();
+                     OutputStream out = Files.newOutputStream(ziel,
+                             StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
+                    in.transferTo(out);
+                }
+
+                long jetzt = Files.size(ziel);
+                if (erwartet <= 0 || jetzt >= erwartet) return;   // fertig
+                letzter = new IOException("Abbruch bei " + jetzt + "/" + erwartet + " Bytes");
+            } catch (IOException ioe) {
+                letzter = ioe;   // Verbindung abgebrochen -> nächster Versuch setzt fort
+            }
+        }
+        throw (letzter != null) ? letzter : new IOException("Download fehlgeschlagen");
+    }
+
+    /**
+     * Kleines Update: ersetzt nur die App-JAR im installierten Programm und
+     * startet neu. Legt vorher eine Sicherung an und stellt sie bei einem Fehler
+     * wieder her (Rollback). Nutzerdaten in %APPDATA% bleiben unberührt.
+     */
+    private static Path schreibeJarUpdater(Path tmp, Path neueJar) throws Exception {
+        Path batch = tmp.resolve("kv-update.bat");
+        String inhalt =
+                "@echo off\r\n" +
+                "chcp 65001 >nul\r\n" +
+                "set \"NEU=" + neueJar + "\"\r\n" +
+                "set \"APP=%LOCALAPPDATA%\\KundenVerwaltung\"\r\n" +
+                "set \"ZIEL=%APP%\\app\\KundenVerwaltung-app.jar\"\r\n" +
+                "rem --- Warten, bis die laufende App geschlossen ist ---\r\n" +
+                "timeout /t 2 /nobreak >nul\r\n" +
+                "taskkill /IM KundenVerwaltung.exe /F >nul 2>&1\r\n" +
+                "timeout /t 1 /nobreak >nul\r\n" +
+                "rem --- Sicherung + Austausch (mit Rollback) ---\r\n" +
+                "copy /Y \"%ZIEL%\" \"%ZIEL%.bak\" >nul 2>&1\r\n" +
+                "copy /Y \"%NEU%\" \"%ZIEL%\" >nul\r\n" +
+                "if errorlevel 1 (\r\n" +
+                "  copy /Y \"%ZIEL%.bak\" \"%ZIEL%\" >nul 2>&1\r\n" +
+                ")\r\n" +
+                "del \"%ZIEL%.bak\" >nul 2>&1\r\n" +
+                "rem --- Neu starten ---\r\n" +
+                "start \"\" \"%APP%\\KundenVerwaltung.exe\"\r\n";
+        Files.writeString(batch, inhalt);
+        return batch;
     }
 
     /**

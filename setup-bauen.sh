@@ -17,17 +17,19 @@ set -e
 VERSION=$(sed -n 's:.*<version>\(.*\)</version>.*:\1:p' pom.xml | head -1)
 [ -z "$VERSION" ] && VERSION="1.0.0"
 echo "==> Version laut pom.xml: ${VERSION}"
-JAR="KundenVerwaltung-${VERSION}-app.jar"
+JAR="KundenVerwaltung-${VERSION}-app.jar"   # von Maven erzeugt (mit Version im Namen)
+STABIL="KundenVerwaltung-app.jar"            # fester Name im Programm (für kleine Updates)
 MAIN_CLASS="de.reinheit.kundenverwaltung.Launcher"
 PAKET="dist/KundenVerwaltung-Setup"
 
 echo "==> 1/5  Fat JAR bauen"
 mvn -q clean package
 
-echo "==> 2/5  Eingabeordner vorbereiten"
+echo "==> 2/5  Eingabeordner vorbereiten (JAR mit festem Namen)"
 rm -rf build-input dist
 mkdir -p build-input
-cp "target/${JAR}" build-input/
+# JAR unter festem Namen ablegen -> Updates ersetzen später nur diese eine Datei
+cp "target/${JAR}" "build-input/${STABIL}"
 
 echo "==> 3/5  Anwendung erzeugen (app-image)"
 ICON_OPT=""
@@ -41,7 +43,7 @@ jpackage \
   --app-version "${VERSION}" \
   --vendor "Reinheit & Sauberkeit GmbH" \
   --input build-input \
-  --main-jar "${JAR}" \
+  --main-jar "${STABIL}" \
   --main-class "${MAIN_CLASS}" \
   --java-options "-Dfile.encoding=UTF-8" \
   ${ICON_OPT} \
@@ -53,12 +55,15 @@ mv dist/KundenVerwaltung "${PAKET}/app"
 cp setup-vorlage/Installieren.bat   "${PAKET}/"
 cp setup-vorlage/Deinstallieren.bat "${PAKET}/"
 
-echo "==> 5/5  ZIP erstellen"
+echo "==> 5/5  ZIP + kleines Update-JAR erstellen"
 ( cd dist && powershell -NoProfile -Command \
     "Compress-Archive -Path 'KundenVerwaltung-Setup' -DestinationPath 'KundenVerwaltung-Setup.zip' -Force" )
+# Kleines Update-Paket (~wenige MB): nur die App, ohne Java-Laufzeit
+cp "target/${JAR}" "dist/${STABIL}"
 
 echo
-echo "Fertig:  dist/KundenVerwaltung-Setup.zip"
+echo "Fertig:"
+echo "  dist/KundenVerwaltung-Setup.zip   (voller Installer – Erstinstallation)"
+echo "  dist/KundenVerwaltung-app.jar     (kleines Update – an die Release anhängen)"
 echo
-echo "An den Kunden schicken. Er entpackt die ZIP-Datei und"
-echo "doppelklickt auf 'Installieren.bat'."
+echo "Beide Dateien an die GitHub-Release anhängen."
