@@ -22,6 +22,10 @@ STABIL="KundenVerwaltung-app.jar"            # fester Name im Programm (für kle
 MAIN_CLASS="de.reinheit.kundenverwaltung.Launcher"
 PAKET="dist/KundenVerwaltung-Setup"
 
+# Version fest in die App schreiben (unabhängig vom Maven-Filter) -> landet im JAR
+echo "==> version.properties schreiben: ${VERSION}"
+printf 'app.version=%s\n' "${VERSION}" > src/main/resources/version.properties
+
 echo "==> 1/5  Fat JAR bauen"
 mvn -q clean package
 
