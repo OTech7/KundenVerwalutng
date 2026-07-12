@@ -87,6 +87,7 @@ public final class UpdatePruefer {
 
     private static String hole(String url) throws Exception {
         HttpClient c = HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)          // vermeidet "Connection reset" (HTTP/2)
                 .followRedirects(HttpClient.Redirect.NORMAL)
                 .connectTimeout(Duration.ofSeconds(6)).build();
         HttpRequest r = HttpRequest.newBuilder(URI.create(url))
@@ -187,6 +188,7 @@ public final class UpdatePruefer {
                 Path zip = tmp.resolve("KundenVerwaltung-Setup.zip");
 
                 HttpClient c = HttpClient.newBuilder()
+                        .version(HttpClient.Version.HTTP_1_1)          // vermeidet "Connection reset" (HTTP/2)
                         .followRedirects(HttpClient.Redirect.NORMAL)   // GitHub-Assets leiten weiter (302)
                         .connectTimeout(Duration.ofSeconds(10)).build();
                 HttpRequest r = HttpRequest.newBuilder(URI.create(zipUrl))
