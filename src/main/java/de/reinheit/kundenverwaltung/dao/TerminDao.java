@@ -48,6 +48,26 @@ public class TerminDao {
         }
     }
 
+    /**
+     * Markiert alle fälligen, noch offenen Termine als „Erledigt":
+     * Datum ist heute oder in der Vergangenheit und der Status ist leer.
+     * Ein manuell gesetzter Status (z. B. „Abgesagt") bleibt unangetastet.
+     * @return Anzahl der aktualisierten Termine
+     */
+    public int markiereFaelligeAlsErledigt() {
+        String heute = java.time.LocalDate.now().toString();
+        String sql = "UPDATE Termine SET Status='Erledigt' "
+                + "WHERE (Status IS NULL OR Status='') AND TerminDatum <= ?";
+        try (PreparedStatement ps = Database.get().prepareStatement(sql)) {
+            ps.setString(1, heute);
+            int n = ps.executeUpdate();
+            if (n > 0) AuditService.log("Aktualisiert", "Termin", n + " faellige Termine auf Erledigt gesetzt");
+            return n;
+        } catch (SQLException e) {
+            throw new RuntimeException("Fällige Termine aktualisieren fehlgeschlagen", e);
+        }
+    }
+
     /** Löscht einen Termin. */
     public void loeschen(int id) {
         try (PreparedStatement ps = Database.get().prepareStatement("DELETE FROM Termine WHERE Id=?")) {

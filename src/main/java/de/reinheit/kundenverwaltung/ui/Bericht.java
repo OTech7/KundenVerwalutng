@@ -61,16 +61,7 @@ public final class Bericht {
         VBox fussBox = new VBox(fuss);
         fussBox.setPadding(new Insets(16, seit, 12, seit));
         ziel.getChildren().add(fussBox);
-
-        // ----- Firmen-Fußzeile (Kontakt/Bank) als Bild, volle Breite -----
-        var footerUrl = Bericht.class.getResource("/images/footer.jpg");
-        if (footerUrl != null) {
-            ImageView footer = new ImageView(new Image(footerUrl.toExternalForm()));
-            footer.setFitWidth(breite);
-            footer.setPreserveRatio(true);
-            footer.setSmooth(true);
-            ziel.getChildren().add(new VBox(footer));
-        }
+        // Die Firmen-Fußzeile (Bild) setzt der Drucker automatisch an jeden Seitenfuß.
     }
 
     /** Eine Tabellenzeile mit gleich breiten Spalten als eigener, eingerückter Block. */

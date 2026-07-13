@@ -425,19 +425,53 @@ public class KundenFenster {
             ziel.getChildren().add(kopf);
         }
 
-        // Titel
-        Label titel = new Label("Kundendatenblatt – " + druckWert(k.getVollstaendigerName()));
-        titel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #006E9C; "
-                + "-fx-border-color: transparent transparent #01AAF0 transparent; -fx-border-width: 0 0 2 0; "
-                + "-fx-padding: 0 0 8 0;");
-        ziel.getChildren().add(druckBlock(titel, seit));
+        // ---- Kopf im Stil eines deutschen Geschäftsbriefs ----
+        // Absenderzeile (klein, über dem Anschriftfeld)
+        Label absender = new Label("Reinheit & Sauberkeit GmbH · Hauptstr. 219 · 30826 Garbsen");
+        absender.setStyle("-fx-font-size: 9px; -fx-text-fill: #5b7a8a; "
+                + "-fx-border-color: transparent transparent #94a3b8 transparent; -fx-border-width: 0 0 1 0; -fx-padding: 0 0 2 0;");
+        VBox absBlock = druckBlock(absender, seit);
+        absBlock.setPadding(new Insets(6, seit, 0, seit));
+        ziel.getChildren().add(absBlock);
 
-        // ---- Kundendaten: jede Zeile ein eigener Block (saubere Seitenumbrüche) ----
-        ziel.getChildren().add(druckBlock(abschnitt("Kundendaten"), seit));
+        // Anschriftfeld (Empfänger = Kunde): Name, Straße, dann PLZ + Ort
+        VBox anschrift = new VBox(1);
+        Label anName = new Label(druckWert(k.getVollstaendigerName()));
+        anName.setStyle("-fx-font-weight: bold;");
+        anschrift.getChildren().add(anName);
+        String[] adrZeilen = adresseZeilen(k.getAdresse());
+        Label anStrasse = new Label(adrZeilen[0]);
+        anStrasse.setWrapText(true);
+        anschrift.getChildren().add(anStrasse);
+        if (adrZeilen[1] != null && !adrZeilen[1].isBlank()) {
+            Label anPlzOrt = new Label(adrZeilen[1]);
+            anPlzOrt.setWrapText(true);
+            anschrift.getChildren().add(anPlzOrt);
+        }
+        VBox anBlock = druckBlock(anschrift, seit);
+        anBlock.setPadding(new Insets(10, seit, 0, seit));
+        ziel.getChildren().add(anBlock);
+
+        // Ort/Datum, rechtsbündig
+        Label datum = new Label("Garbsen, den " + Datum.anzeige(java.time.LocalDate.now()));
+        datum.setMaxWidth(Double.MAX_VALUE);
+        datum.setAlignment(javafx.geometry.Pos.CENTER_RIGHT);
+        VBox datBlock = druckBlock(datum, seit);
+        datBlock.setPadding(new Insets(16, seit, 0, seit));
+        ziel.getChildren().add(datBlock);
+
+        // Betreff
+        Label betreff = new Label("Kundendatenblatt");
+        betreff.setStyle("-fx-font-size: 15px; -fx-font-weight: bold; -fx-text-fill: #006E9C; "
+                + "-fx-border-color: transparent transparent #01AAF0 transparent; -fx-border-width: 0 0 2 0; -fx-padding: 0 0 8 0;");
+        VBox betrBlock = druckBlock(betreff, seit);
+        betrBlock.setPadding(new Insets(16, seit, 6, seit));
+        ziel.getChildren().add(betrBlock);
+
+        // ---- Angaben zum Kunden: jede Zeile ein eigener Block (saubere Seitenumbrüche) ----
+        ziel.getChildren().add(druckBlock(abschnitt("Angaben zum Kunden"), seit));
         String[][] felder = {
                 {"Kundennummer", String.valueOf(k.getKundennummer())},
-                {"Name", druckWert(k.getVollstaendigerName())},
-                {"Adresse", druckWert(k.getAdresse())},
                 {"Geburtsdatum", Datum.anzeige(k.getGeburtsdatum())},
                 {"Telefon", druckWert(k.getTelefon())},
                 {"E-Mail", druckWert(k.getEMail())},
@@ -451,11 +485,6 @@ public class KundenFenster {
                 {"Verbleibende Stunden", zahl(k.getVerbleibendeStunden()) + " h"},
                 {"Vertragsbeginn", Datum.anzeige(k.getVertragsbeginn())},
                 {"Abrechnung alle", k.getAbrechnungRhythmusMonate() + " Monate"},
-                {"Termin-Plan", druckWert(k.getTerminPlan())},
-                {"Wochentage", druckWert(k.getWochentage())},
-                {"Uhrzeit", druckWert(k.getUhrzeit())},
-                {"Ort / Bereich", druckWert(k.getOrtBereich())},
-                {"Hinweise / Zugang", druckWert(k.getZugang())},
                 {"Status", k.isIstAktiv() ? "Aktiver Kunde" : "Ehemaliger Kunde"},
                 {"Notizen", druckWert(k.getNotizen())},
         };
@@ -496,22 +525,7 @@ public class KundenFenster {
                 ziel.getChildren().add(druckBlock(hinweisLabel("Keine Zahlungen vorhanden."), seit));
         }
 
-        // ---- Abschluss-Zeile ----
-        Label fuss = new Label("— Erstellt mit KundenVerwaltung · " + Datum.anzeige(java.time.LocalDate.now()) + " —");
-        fuss.setStyle("-fx-text-fill: #94a3b8;");
-        fuss.setPadding(new Insets(16, 0, 6, 0));
-        ziel.getChildren().add(druckBlock(fuss, seit));
-
-        // ---- Firmen-Fußzeile (Kontakt/Bank) als Bild, volle Breite ----
-        var footerUrl = getClass().getResource("/images/footer.jpg");
-        if (footerUrl != null) {
-            javafx.scene.image.ImageView footer =
-                    new javafx.scene.image.ImageView(new javafx.scene.image.Image(footerUrl.toExternalForm()));
-            footer.setFitWidth(breite);
-            footer.setPreserveRatio(true);
-            footer.setSmooth(true);
-            ziel.getChildren().add(new VBox(footer));
-        }
+        // Die Firmen-Fußzeile (Bild) setzt der Drucker automatisch an jeden Seitenfuß.
     }
 
     /** Wrappt einen Inhalt in einen seitlich eingerückten Block. */
@@ -568,6 +582,29 @@ public class KundenFenster {
 
 
     private String druckWert(String s) { return (s == null || s.isBlank()) ? "—" : s; }
+
+    /**
+     * Teilt eine Adresse in zwei Zeilen: [0] = Straße + Nr., [1] = PLZ + Ort.
+     * Erkennt Zeilenumbruch, sonst die 5-stellige PLZ, sonst ein Komma.
+     */
+    private String[] adresseZeilen(String adresse) {
+        if (adresse == null || adresse.isBlank()) return new String[]{"—", ""};
+        String a = adresse.trim();
+        if (a.contains("\n")) {
+            int nl = a.indexOf('\n');
+            return new String[]{a.substring(0, nl).trim(), a.substring(nl + 1).trim().replace("\n", " ")};
+        }
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\b\\d{5}\\b").matcher(a);
+        if (m.find() && m.start() > 0) {
+            String strasse = a.substring(0, m.start()).replaceAll("[,;\\s]+$", "").trim();
+            String plzOrt = a.substring(m.start()).trim();
+            if (!strasse.isEmpty()) return new String[]{strasse, plzOrt};
+            return new String[]{plzOrt, ""};
+        }
+        int komma = a.lastIndexOf(',');
+        if (komma > 0) return new String[]{a.substring(0, komma).trim(), a.substring(komma + 1).trim()};
+        return new String[]{a, ""};
+    }
     private String zahl(double d) { return d == Math.floor(d) ? String.valueOf((long) d) : String.valueOf(d); }
 
     /** Erstellt für den ausgewählten Kunden ein Word-Datenblatt (.docx). */

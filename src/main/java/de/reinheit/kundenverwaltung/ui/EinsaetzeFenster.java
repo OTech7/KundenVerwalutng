@@ -141,6 +141,9 @@ public class EinsaetzeFenster {
     }
 
     private void laden() {
+        // Sammel-Einsätze automatisch aus dem Status ihrer Termine aktualisieren
+        dao.aktualisiereStatusAusTerminen();
+
         // Kundennamen zuordnen
         java.util.Map<Integer, String> namen = new java.util.HashMap<>();
         for (Kunde k : kundeDao.findeAlle()) namen.put(k.getKundennummer(), k.getVollstaendigerName());

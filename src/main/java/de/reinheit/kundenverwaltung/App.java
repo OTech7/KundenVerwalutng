@@ -39,6 +39,10 @@ public class App extends Application {
             return;
         }
 
+        // Fällige, noch offene Termine automatisch auf „Erledigt" setzen –
+        // jetzt beim Start und danach einmal täglich, solange die App läuft.
+        starteTerminAutomatik();
+
         scene = new Scene(new javafx.scene.layout.StackPane(), 1000, 640);
         var css = App.class.getResource("/styles.css");
         if (css != null) scene.getStylesheets().add(css.toExternalForm());
@@ -71,6 +75,23 @@ public class App extends Application {
     private void abmelden() {
         Session.abmelden();
         zeigeLogin();
+    }
+
+    /** Setzt fällige offene Termine auf „Erledigt" – sofort und danach täglich. */
+    private void starteTerminAutomatik() {
+        Runnable pruefen = () -> {
+            try {
+                new de.reinheit.kundenverwaltung.dao.TerminDao().markiereFaelligeAlsErledigt();
+                new de.reinheit.kundenverwaltung.dao.EinsatzDao().aktualisiereStatusAusTerminen();
+            } catch (Exception e) { System.err.println("Termin-Automatik fehlgeschlagen: " + e); }
+        };
+        pruefen.run();   // sofort beim Start (läuft auf dem FX-Thread)
+
+        long einTag = 24L * 60 * 60 * 1000;
+        java.util.Timer timer = new java.util.Timer("termin-automatik", true);   // Daemon
+        timer.scheduleAtFixedRate(new java.util.TimerTask() {
+            @Override public void run() { Platform.runLater(pruefen); }   // DB-Zugriff auf FX-Thread
+        }, einTag, einTag);
     }
 
     private void setRoot(Parent root) {

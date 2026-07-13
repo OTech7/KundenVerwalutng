@@ -10,9 +10,13 @@ import javafx.scene.Scene;
 import javafx.scene.SnapshotParameters;
 import javafx.scene.control.Button;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.transform.Transform;
@@ -86,6 +90,9 @@ public final class Drucker {
         seiteInhalt.setMaxWidth(pw);
         seiteInhalt.setStyle("-fx-background-color: white;");
         inhalt.befuellen(seiteInhalt, pw);
+        // Fußzeile in der Vorschau unten anhängen (im Druck steht sie auf jeder Seite)
+        Node fussVorschau = fusszeileNode(pw);
+        if (fussVorschau != null) seiteInhalt.getChildren().add(fussVorschau);
 
         // Weiße „Seite" auf grauem Hintergrund
         HBox blatt = new HBox(seiteInhalt);
@@ -212,8 +219,9 @@ public final class Drucker {
     }
 
     /**
-     * Baut den Inhalt in Seitenbreite auf und verteilt die Blöcke seitenweise,
-     * ohne einen Block (z. B. eine Tabellenzeile) zu zerschneiden.
+     * Baut den Inhalt in Seitenbreite auf, verteilt die Blöcke seitenweise
+     * (ohne einen Block zu zerschneiden) und setzt die Firmen-Fußzeile fest an
+     * den unteren Rand JEDER Seite.
      */
     private static List<VBox> baueSeiten(Inhalt inhalt, double pw, double ph, double rand) {
         VBox master = new VBox(2);
@@ -233,31 +241,68 @@ public final class Drucker {
         for (Node b : bloecke) hoehen.add(b.getLayoutBounds().getHeight());
         master.getChildren().clear();
 
-        double nutzbar = ph - 2 * rand;
-        List<VBox> seiten = new ArrayList<>();
-        VBox aktuell = neueSeite(pw, rand, spacing);
+        double fussH = fusszeileHoehe(pw);
+        double reserviert = fussH > 0 ? fussH + 10 : 0;
+        double nutzbar = ph - 2 * rand - reserviert;
+
+        // Blöcke auf Seiten (Listen) verteilen
+        List<List<Node>> gruppen = new ArrayList<>();
+        List<Node> aktuell = new ArrayList<>();
         double h = 0;
         for (int i = 0; i < bloecke.size(); i++) {
             double bh = hoehen.get(i);
             if (h > 0 && h + spacing + bh > nutzbar) {
-                seiten.add(aktuell);
-                aktuell = neueSeite(pw, rand, spacing);
+                gruppen.add(aktuell);
+                aktuell = new ArrayList<>();
                 h = 0;
             }
-            aktuell.getChildren().add(bloecke.get(i));
+            aktuell.add(bloecke.get(i));
             h += (h > 0 ? spacing : 0) + bh;
         }
-        if (!aktuell.getChildren().isEmpty()) seiten.add(aktuell);
+        if (!aktuell.isEmpty() || gruppen.isEmpty()) gruppen.add(aktuell);
+
+        List<VBox> seiten = new ArrayList<>();
+        for (List<Node> gruppe : gruppen) seiten.add(baueSeite(pw, ph, rand, spacing, gruppe));
         return seiten;
     }
 
-    /** Leere Druckseite in Seitenbreite (oben/unten Rand, seitlich 0). */
-    private static VBox neueSeite(double pw, double rand, double spacing) {
-        VBox s = new VBox(spacing);
-        s.setPadding(new Insets(rand, 0, rand, 0));
-        s.setMinWidth(pw);
-        s.setPrefWidth(pw);
-        s.setMaxWidth(pw);
-        return s;
+    /** Eine vollständige Seite (fester Höhe) mit Inhalt oben und Fußzeile unten. */
+    private static VBox baueSeite(double pw, double ph, double rand, double spacing, List<Node> bloecke) {
+        VBox inhalt = new VBox(spacing);
+        inhalt.getChildren().addAll(bloecke);
+
+        Region fueller = new Region();
+        VBox.setVgrow(fueller, Priority.ALWAYS);
+
+        VBox seite = new VBox();
+        seite.setPadding(new Insets(rand, 0, rand, 0));
+        seite.setMinWidth(pw);  seite.setPrefWidth(pw);  seite.setMaxWidth(pw);
+        seite.setMinHeight(ph); seite.setPrefHeight(ph); seite.setMaxHeight(ph);
+        seite.setStyle("-fx-background-color: white;");
+        seite.getChildren().addAll(inhalt, fueller);
+
+        Node fuss = fusszeileNode(pw);
+        if (fuss != null) seite.getChildren().add(fuss);
+        return seite;
+    }
+
+    /** Firmen-Fußzeile (Kontakt/Bank) als Bild in voller Breite – frisch je Seite. */
+    static Node fusszeileNode(double pw) {
+        var url = Drucker.class.getResource("/images/footer.jpg");
+        if (url == null) return null;
+        ImageView iv = new ImageView(new Image(url.toExternalForm()));
+        iv.setFitWidth(pw);
+        iv.setPreserveRatio(true);
+        iv.setSmooth(true);
+        return iv;
+    }
+
+    /** Höhe der Fußzeile bei voller Breite (aus dem Seitenverhältnis). */
+    private static double fusszeileHoehe(double pw) {
+        var url = Drucker.class.getResource("/images/footer.jpg");
+        if (url == null) return 0;
+        Image img = new Image(url.toExternalForm());
+        double w = img.getWidth(), hh = img.getHeight();
+        return (w > 0) ? pw * (hh / w) : 0;
     }
 }

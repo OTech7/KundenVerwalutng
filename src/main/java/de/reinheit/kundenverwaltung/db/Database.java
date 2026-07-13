@@ -97,6 +97,7 @@ public final class Database {
                 Leistungsart        TEXT,
                 Einsatzstatus       TEXT,
                 Notizen             TEXT,
+                ZeitraumBis         TEXT,
                 FOREIGN KEY (Kundennummer) REFERENCES Kunden(Kundennummer) ON DELETE CASCADE
             );
             """,
@@ -170,6 +171,7 @@ public final class Database {
         migriereKunden();   // fehlende Spalten in bestehender DB ergänzen
         migriereBenutzer(); // MussPasswortAendern in bestehender DB ergänzen
         migriereTermine();  // Status in bestehender DB ergänzen
+        migriereEinsaetze(); // ZeitraumBis in bestehender DB ergänzen
         seedIfEmpty();
         seedAdminIfEmpty();
         seedStammdatenIfEmpty();
@@ -229,6 +231,24 @@ public final class Database {
     }
 
     /** Ergänzt die Status-Spalte in einer bestehenden Termine-Tabelle. */
+    /** Ergänzt die Spalte ZeitraumBis in einer bestehenden Einsaetze-Tabelle. */
+    private static void migriereEinsaetze() {
+        java.util.Set<String> vorhanden = new java.util.HashSet<>();
+        try (Statement st = get().createStatement();
+             var rs = st.executeQuery("PRAGMA table_info(Einsaetze)")) {
+            while (rs.next()) vorhanden.add(rs.getString("name"));
+        } catch (SQLException e) {
+            throw new RuntimeException("Einsaetze-Schema-Prüfung fehlgeschlagen", e);
+        }
+        if (!vorhanden.contains("ZeitraumBis")) {
+            try (Statement st = get().createStatement()) {
+                st.execute("ALTER TABLE Einsaetze ADD COLUMN ZeitraumBis TEXT");
+            } catch (SQLException e) {
+                throw new RuntimeException("Spalte ZeitraumBis konnte nicht ergänzt werden", e);
+            }
+        }
+    }
+
     private static void migriereTermine() {
         java.util.Set<String> vorhanden = new java.util.HashSet<>();
         try (Statement st = get().createStatement();

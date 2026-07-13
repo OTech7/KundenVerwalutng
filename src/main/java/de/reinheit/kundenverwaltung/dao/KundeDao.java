@@ -20,9 +20,13 @@ public class KundeDao {
     public List<Kunde> findeEhemalige() { return finde(0); }
 
     private List<Kunde> finde(Integer aktivFilter) {
-        String sql = "SELECT * FROM Kunden"
-                + (aktivFilter == null ? "" : " WHERE IstAktiv = ?")
-                + " ORDER BY Kundennummer";
+        // Erbrachte Stunden = Summe der Dauer aller erledigten ODER abgesagten Termine.
+        String sql = "SELECT k.*, "
+                + "COALESCE((SELECT SUM(t.Dauer) FROM Termine t "
+                + "WHERE t.Kundennummer = k.Kundennummer AND t.Status IN ('Erledigt','Abgesagt')), 0) AS ErbrachtStd "
+                + "FROM Kunden k"
+                + (aktivFilter == null ? "" : " WHERE k.IstAktiv = ?")
+                + " ORDER BY k.Kundennummer";
         List<Kunde> list = new ArrayList<>();
         try (PreparedStatement ps = Database.get().prepareStatement(sql)) {
             if (aktivFilter != null) ps.setInt(1, aktivFilter);
@@ -165,8 +169,10 @@ public class KundeDao {
         k.setKrankenkasseNummer(CryptoService.entschluesseln(rs.getString("KrankenkasseNummer")));
         k.setLeistungsart(rs.getString("Leistungsart"));
         k.setGenehmigteStunden(rs.getDouble("GenehmigteStunden"));
-        k.setErbrachteStunden(rs.getDouble("ErbrachteStunden"));
-        k.setVerbleibendeStunden(rs.getDouble("VerbleibendeStunden"));
+        // Erbracht aus erledigten Terminen berechnet; Verbleibend = Genehmigt − Erbracht.
+        double erbracht = rs.getDouble("ErbrachtStd");
+        k.setErbrachteStunden(erbracht);
+        k.setVerbleibendeStunden(k.getGenehmigteStunden() - erbracht);
         k.setZustaendigerMitarbeiter(rs.getString("ZustaendigerMitarbeiter"));
         k.setNotizen(rs.getString("Notizen"));
         k.setIstAktiv(rs.getInt("IstAktiv") == 1);

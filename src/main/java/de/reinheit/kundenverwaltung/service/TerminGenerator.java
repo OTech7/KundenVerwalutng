@@ -52,7 +52,8 @@ public class TerminGenerator {
                         wocheLabel(tag),
                         "Auto-Termin nach Plan „" + kunde.getTerminPlan() + "“"
                 );
-                t.setStatus("Erledigt");   // Standard: erledigt
+                // Nur vergangene Termine sind automatisch „Erledigt"; zukünftige bleiben offen.
+                if (datum.isBefore(LocalDate.now())) t.setStatus("Erledigt");
                 result.add(t);
             }
         }
@@ -133,7 +134,8 @@ public class TerminGenerator {
             if (!wochen.contains(wocheImMonat)) continue;
             Termin t = new Termin(kunde.getKundennummer(), d.toString(), dauer,
                     "Woche " + wocheImMonat, "Auto-Termin nach Plan „" + plan + "“");
-            t.setStatus("Erledigt");   // Standard: erledigt
+            // Nur vergangene Termine sind automatisch „Erledigt"; zukünftige bleiben offen.
+            if (d.isBefore(LocalDate.now())) t.setStatus("Erledigt");
             result.add(t);
         }
         return result;

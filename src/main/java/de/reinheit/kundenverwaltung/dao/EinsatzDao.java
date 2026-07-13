@@ -48,8 +48,8 @@ public class EinsatzDao {
 
         String sql = """
             INSERT INTO Einsaetze
-            (Kundennummer, Einsatzdatum, Mitarbeiter, EinsatzdauerStunden, Leistungsart, Einsatzstatus, Notizen)
-            VALUES (?,?,?,?,?,?,?)
+            (Kundennummer, Einsatzdatum, Mitarbeiter, EinsatzdauerStunden, Leistungsart, Einsatzstatus, Notizen, ZeitraumBis)
+            VALUES (?,?,?,?,?,?,?,?)
             """;
         int erzeugt = 0;
         try (PreparedStatement ps = Database.get().prepareStatement(sql)) {
@@ -80,6 +80,7 @@ public class EinsatzDao {
                 ps.setString(5, k != null ? k.getLeistungsart() : null);
                 ps.setString(6, "");                                    // Status offen
                 ps.setString(7, notiz);
+                ps.setString(8, max);                                   // spätester Termin (Zeitraum-Ende)
                 ps.addBatch();
                 erzeugt++;
             }
@@ -89,6 +90,34 @@ public class EinsatzDao {
         }
         if (erzeugt > 0) AuditService.log("Angelegt", "Einsatz", erzeugt + " Sammel-Einsatz/-Einsätze aus Terminen");
         return erzeugt;
+    }
+
+    /**
+     * Setzt jeden Sammel-Einsatz automatisch auf „Erledigt", sobald ALLE seine
+     * Termine erledigt oder abgesagt sind; sonst bleibt der Status leer.
+     * „Termine des Einsatzes" = Termine des Kunden im Zeitraum [Einsatzdatum … ZeitraumBis].
+     * Bucht keine Stunden (die kommen aus den Terminen).
+     * @return Anzahl der geänderten Einsätze
+     */
+    public int aktualisiereStatusAusTerminen() {
+        String sql = """
+            UPDATE Einsaetze
+            SET Einsatzstatus = CASE
+              WHEN (SELECT COUNT(*) FROM Termine t
+                    WHERE t.Kundennummer = Einsaetze.Kundennummer
+                      AND t.TerminDatum BETWEEN Einsaetze.Einsatzdatum AND Einsaetze.ZeitraumBis) > 0
+               AND (SELECT COUNT(*) FROM Termine t
+                    WHERE t.Kundennummer = Einsaetze.Kundennummer
+                      AND t.TerminDatum BETWEEN Einsaetze.Einsatzdatum AND Einsaetze.ZeitraumBis
+                      AND (t.Status IS NULL OR t.Status NOT IN ('Erledigt','Abgesagt'))) = 0
+              THEN 'Erledigt' ELSE '' END
+            WHERE ZeitraumBis IS NOT NULL
+            """;
+        try (Statement st = Database.get().createStatement()) {
+            return st.executeUpdate(sql);
+        } catch (SQLException e) {
+            throw new RuntimeException("Einsatz-Status aus Terminen aktualisieren fehlgeschlagen", e);
+        }
     }
 
     public List<Einsatz> findeAlle() {
