@@ -298,7 +298,8 @@ public final class Database {
             {"StandardTerminDauer", "REAL DEFAULT 1.5"},
             {"AbrechnungRhythmusMonate", "INTEGER DEFAULT 3"},
             {"LetzteAbrechnungBis", "TEXT"},
-            {"PreisProTermin", "REAL DEFAULT 0"}
+            {"PreisProTermin", "REAL DEFAULT 0"},
+            {"Versicherungsnummer", "TEXT"}
         };
         java.util.Set<String> vorhanden = new java.util.HashSet<>();
         try (Statement st = get().createStatement();

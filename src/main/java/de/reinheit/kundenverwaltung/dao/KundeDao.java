@@ -51,8 +51,9 @@ public class KundeDao {
              Geburtsdatum, Telefon, EMail, Pflegegrad, PflegegradSeit,
              Vertragsbeginn, Abrechnungszeitraum, NaechsteAbrechnung,
              Wochentage, Uhrzeit, OrtBereich, Zugang, StandardTerminDauer,
-             AbrechnungRhythmusMonate, LetzteAbrechnungBis, PreisProTermin)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+             AbrechnungRhythmusMonate, LetzteAbrechnungBis, PreisProTermin,
+             Versicherungsnummer)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """;
         try (PreparedStatement ps = Database.get().prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, k.getVollstaendigerName());
@@ -82,6 +83,7 @@ public class KundeDao {
             ps.setInt(25, k.getAbrechnungRhythmusMonate());
             ps.setString(26, k.getLetzteAbrechnungBis());
             ps.setDouble(27, k.getPreisProTermin());
+            ps.setString(28, CryptoService.verschluesseln(k.getVersicherungsnummer()));
             ps.executeUpdate();
 
             int neueNr;
@@ -111,7 +113,8 @@ public class KundeDao {
               Geburtsdatum=?, Telefon=?, EMail=?, Pflegegrad=?, PflegegradSeit=?,
               Vertragsbeginn=?, Abrechnungszeitraum=?, NaechsteAbrechnung=?,
               Wochentage=?, Uhrzeit=?, OrtBereich=?, Zugang=?, StandardTerminDauer=?,
-              AbrechnungRhythmusMonate=?, LetzteAbrechnungBis=?, PreisProTermin=?
+              AbrechnungRhythmusMonate=?, LetzteAbrechnungBis=?, PreisProTermin=?,
+              Versicherungsnummer=?
             WHERE Kundennummer=?
             """;
         try (PreparedStatement ps = Database.get().prepareStatement(sql)) {
@@ -142,7 +145,8 @@ public class KundeDao {
             ps.setInt(25, k.getAbrechnungRhythmusMonate());
             ps.setString(26, k.getLetzteAbrechnungBis());
             ps.setDouble(27, k.getPreisProTermin());
-            ps.setInt(28, k.getKundennummer());
+            ps.setString(28, CryptoService.verschluesseln(k.getVersicherungsnummer()));
+            ps.setInt(29, k.getKundennummer());
             ps.executeUpdate();
             AuditService.log("Bearbeitet", "Kunde", "Nr. " + k.getKundennummer() + " – " + k.getVollstaendigerName());
         } catch (SQLException e) {
@@ -180,6 +184,7 @@ public class KundeDao {
         k.setGeburtsdatum(CryptoService.entschluesseln(rs.getString("Geburtsdatum")));
         k.setTelefon(CryptoService.entschluesseln(rs.getString("Telefon")));
         k.setEMail(CryptoService.entschluesseln(rs.getString("EMail")));
+        k.setVersicherungsnummer(CryptoService.entschluesseln(rs.getString("Versicherungsnummer")));
         k.setPflegegrad(CryptoService.entschluesseln(rs.getString("Pflegegrad")));
         k.setPflegegradSeit(rs.getString("PflegegradSeit"));
         k.setVertragsbeginn(rs.getString("Vertragsbeginn"));

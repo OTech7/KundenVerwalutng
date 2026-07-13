@@ -43,6 +43,7 @@ public class WordExportService {
             zeile(t1, "Telefonnummer:", n(k.getTelefon()));
             zeile(t1, "E-Mail:", n(k.getEMail()));
             zeile(t1, "Krankenkasse:", n(k.getKrankenkasseNummer()));
+            zeile(t1, "Versicherungsnummer:", n(k.getVersicherungsnummer()));
             zeile(t1, "Pflegegrad:", n(k.getPflegegrad()));
             zeile(t1, "Pflegegrad seit:", n(Datum.anzeige(k.getPflegegradSeit())));
             gridSetzen(t1, 2);

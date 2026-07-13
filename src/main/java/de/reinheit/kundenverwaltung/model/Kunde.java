@@ -21,6 +21,7 @@ public class Kunde {
     private String geburtsdatum;
     private String telefon;
     private String eMail;
+    private String versicherungsnummer;
     private String pflegegrad;
     private String pflegegradSeit;
     private String vertragsbeginn;
@@ -91,6 +92,8 @@ public class Kunde {
     public void   setTelefon(String v) { this.telefon = v; }
     public String getEMail() { return eMail; }
     public void   setEMail(String v) { this.eMail = v; }
+    public String getVersicherungsnummer() { return versicherungsnummer; }
+    public void   setVersicherungsnummer(String v) { this.versicherungsnummer = v; }
     public String getPflegegrad() { return pflegegrad; }
     public void   setPflegegrad(String v) { this.pflegegrad = v; }
     public String getPflegegradSeit() { return pflegegradSeit; }

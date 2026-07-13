@@ -79,13 +79,16 @@ public class TerminDao {
         }
     }
 
-    /** Aktualisiert Status und Notizen eines Termins. */
+    /** Aktualisiert Datum, Dauer, Woche, Status und Notizen eines Termins. */
     public void aktualisieren(Termin t) {
-        String sql = "UPDATE Termine SET Status=?, Notizen=? WHERE Id=?";
+        String sql = "UPDATE Termine SET TerminDatum=?, Dauer=?, Woche=?, Status=?, Notizen=? WHERE Id=?";
         try (PreparedStatement ps = Database.get().prepareStatement(sql)) {
-            ps.setString(1, t.getStatus());
-            ps.setString(2, t.getNotizen());
-            ps.setInt(3, t.getId());
+            ps.setString(1, t.getTerminDatum());
+            ps.setDouble(2, t.getDauer());
+            ps.setString(3, t.getWoche());
+            ps.setString(4, t.getStatus());
+            ps.setString(5, t.getNotizen());
+            ps.setInt(6, t.getId());
             ps.executeUpdate();
             AuditService.log("Bearbeitet", "Termin", "Nr. " + t.getId() + " · " + t.getStatus());
         } catch (SQLException e) {

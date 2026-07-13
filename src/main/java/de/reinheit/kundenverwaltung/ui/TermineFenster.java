@@ -57,12 +57,12 @@ public class TermineFenster {
         erzeugen.getStyleClass().add("primary");
         erzeugen.setOnAction(e -> dialogErzeugen());
 
-        Button bearbeiten = new Button("✏ Status ändern");
+        Button bearbeiten = new Button("✏ Bearbeiten");
         bearbeiten.getStyleClass().add("primary");
         bearbeiten.setDisable(true);
         bearbeiten.setOnAction(e -> {
             Termin t = tabelle.getSelectionModel().getSelectedItem();
-            if (t != null) dialogStatus(t);
+            if (t != null) dialogBearbeiten(t);
         });
 
         Button loeschen = new Button("🗑 Löschen");
@@ -72,7 +72,7 @@ public class TermineFenster {
         Button drucken = new Button("🖨 Drucken");
         drucken.setOnAction(e -> drucken());
 
-        Label hinweis = new Label("Mehrfachauswahl zum Löschen · Doppelklick zum Ändern");
+        Label hinweis = new Label("Mehrfachauswahl zum Löschen · Doppelklick zum Bearbeiten");
         hinweis.getStyleClass().add("platzhalter");
         Region sp = new Region();
         HBox.setHgrow(sp, Priority.ALWAYS);
@@ -93,11 +93,11 @@ public class TermineFenster {
         );
         tabelle.setItems(daten);
 
-        // Doppelklick öffnet den Status-Dialog
+        // Doppelklick öffnet den Bearbeiten-Dialog
         tabelle.setRowFactory(tv -> {
             TableRow<Termin> row = new TableRow<>();
             row.setOnMouseClicked(ev -> {
-                if (ev.getClickCount() == 2 && !row.isEmpty()) dialogStatus(row.getItem());
+                if (ev.getClickCount() == 2 && !row.isEmpty()) dialogBearbeiten(row.getItem());
             });
             return row;
         });
@@ -112,13 +112,19 @@ public class TermineFenster {
         laden(null);
     }
 
-    /** Status (und Notizen) eines Termins ändern – gleiche Werte wie bei Einsätzen. */
-    private void dialogStatus(Termin t) {
+    /** Termin bearbeiten: Datum, Dauer, Status und Notizen. */
+    private void dialogBearbeiten(Termin t) {
         Dialog<Void> dlg = new Dialog<>();
-        dlg.setTitle("Termin-Status ändern");
-        dlg.setHeaderText(t.getKundenName() + " · " + Datum.anzeige(t.getTerminDatum())
-                + " (" + t.getWochentag() + ")");
+        dlg.setTitle("Termin bearbeiten");
+        dlg.setHeaderText(t.getKundenName());
         dlg.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        DatePicker datum = new DatePicker();
+        datum.setPromptText(KundenFenster.DATUM_FORMAT);
+        datum.setConverter(Datum.konverter());
+        try { datum.setValue(LocalDate.parse(t.getTerminDatum())); } catch (Exception ignored) {}
+
+        TextField dauer = new TextField(String.valueOf(t.getDauer()));
 
         ComboBox<String> status = new ComboBox<>(FXCollections.observableArrayList(
                 "", "Erledigt", "Abgesagt", "Nicht durchgeführt"));
@@ -130,12 +136,28 @@ public class TermineFenster {
 
         GridPane g = new GridPane();
         g.setHgap(10); g.setVgap(10); g.setPadding(new Insets(14));
-        g.addRow(0, new Label("Status"), status);
-        g.addRow(1, new Label("Notizen"), notizen);
+        int r = 0;
+        g.addRow(r++, new Label("Termindatum (" + KundenFenster.DATUM_FORMAT + ")"), datum);
+        g.addRow(r++, new Label("Dauer (Std.)"), dauer);
+        g.addRow(r++, new Label("Status"), status);
+        g.addRow(r++, new Label("Notizen"), notizen);
         dlg.getDialogPane().setContent(g);
+
+        Button ok = (Button) dlg.getDialogPane().lookupButton(ButtonType.OK);
+        ok.addEventFilter(javafx.event.ActionEvent.ACTION, ev -> {
+            String fehler = null;
+            if (datum.getValue() == null) fehler = "Bitte ein Termindatum wählen.";
+            else fehler = Eingabe.pruefeZahl(dauer.getText(), "Dauer", 0.25, 24);
+            if (fehler != null) { Meldung.warnung(fehler); ev.consume(); }
+        });
 
         dlg.setResultConverter(bt -> {
             if (bt != ButtonType.OK) return null;
+            LocalDate d = datum.getValue();
+            t.setTerminDatum(d.toString());
+            t.setWoche("Woche " + ((d.getDayOfMonth() - 1) / 7 + 1));   // Woche aus Datum neu berechnen
+            Double du = Eingabe.zahl(dauer.getText());
+            if (du != null) t.setDauer(du);
             String s = status.getValue();
             t.setStatus(s == null || s.isBlank() ? null : s);
             t.setNotizen(notizen.getText());

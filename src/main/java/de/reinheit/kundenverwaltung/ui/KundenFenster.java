@@ -156,6 +156,7 @@ public class KundenFenster {
         geburtsdatum.setPromptText(DATUM_FORMAT);
         TextField telefon = new TextField();
         TextField email = new TextField();
+        TextField versicherung = new TextField();
         TextField pflegegrad = new TextField();
         TextField pflegegradSeit = new TextField();
         pflegegradSeit.setPromptText(DATUM_FORMAT);
@@ -169,6 +170,7 @@ public class KundenFenster {
             name.setText(bestehend.getVollstaendigerName());
             adresse.setText(bestehend.getAdresse());
             kasse.setValue(bestehend.getKrankenkasseNummer());
+            versicherung.setText(bestehend.getVersicherungsnummer());
             leistung.setValue(bestehend.getLeistungsart());
             genehmigt.setText(String.valueOf(bestehend.getGenehmigteStunden()));
             mitarbeiter.setValue(bestehend.getZustaendigerMitarbeiter());
@@ -195,6 +197,7 @@ public class KundenFenster {
         g.addRow(r++, new Label("Telefonnummer"), telefon);
         g.addRow(r++, new Label("E-Mail"), email);
         g.addRow(r++, new Label("Krankenkasse"), mitVerwaltung(StammdatenDao.KRANKENKASSE, kasse));
+        g.addRow(r++, new Label("Versicherungsnummer"), versicherung);
         g.addRow(r++, new Label("Pflegegrad"), pflegegrad);
         g.addRow(r++, new Label("Pflegegrad seit (" + DATUM_FORMAT + ")"), pflegegradSeit);
         g.add(abschnitt("Vertrag & Leistung"), 0, r++, 2, 1);
@@ -242,6 +245,7 @@ public class KundenFenster {
             k.setVollstaendigerName(name.getText());
             k.setAdresse(adresse.getText());
             k.setKrankenkasseNummer(kasse.getValue());
+            k.setVersicherungsnummer(versicherung.getText());
             k.setLeistungsart(leistung.getValue());
             k.setGenehmigteStunden(parse(genehmigt.getText()));
             k.setZustaendigerMitarbeiter(mitarbeiter.getValue());
@@ -476,6 +480,7 @@ public class KundenFenster {
                 {"Telefon", druckWert(k.getTelefon())},
                 {"E-Mail", druckWert(k.getEMail())},
                 {"Krankenkasse", druckWert(k.getKrankenkasseNummer())},
+                {"Versicherungsnummer", druckWert(k.getVersicherungsnummer())},
                 {"Pflegegrad", druckWert(k.getPflegegrad())},
                 {"Pflegegrad seit", Datum.anzeige(k.getPflegegradSeit())},
                 {"Leistungsart", druckWert(k.getLeistungsart())},
@@ -492,17 +497,17 @@ public class KundenFenster {
 
         // ---- Termine des Kunden mit Status ----
         ziel.getChildren().add(druckBlock(abschnitt("Termine"), seit));
-        double[] tProz = {20, 22, 18, 15, 25};
+        double[] tProz = {16, 18, 12, 18, 36};
         ziel.getChildren().add(zeileBlock(innen, seit, tProz,
-                new String[]{"Datum", "Wochentag", "Woche", "Dauer", "Status"}, true));
+                new String[]{"Datum", "Wochentag", "Woche", "Status", "Notizen"}, true));
         var termine = new de.reinheit.kundenverwaltung.dao.TerminDao().finde(k.getKundennummer());
         for (var termin : termine) {
             ziel.getChildren().add(zeileBlock(innen, seit, tProz, new String[]{
                     Datum.anzeige(termin.getTerminDatum()),
                     termin.getWochentag(),
                     druckWert(termin.getWoche()),
-                    termin.getDauer() + " h",
-                    termin.getStatus() == null ? "" : termin.getStatus()}, false));
+                    termin.getStatus() == null ? "" : termin.getStatus(),
+                    termin.getNotizen() == null ? "" : termin.getNotizen()}, false));
         }
         if (termine.isEmpty())
             ziel.getChildren().add(druckBlock(hinweisLabel("Keine Termine vorhanden."), seit));
@@ -551,8 +556,13 @@ public class KundenFenster {
         g.getColumnConstraints().addAll(c1, c2);
         Label l = new Label(label + ":");
         l.setStyle("-fx-font-weight: bold; -fx-text-fill: #334155;");
+        l.setWrapText(true);
+        l.setMaxWidth(Double.MAX_VALUE);
+        l.setMinWidth(0);
         Label w = new Label(wert == null ? "" : wert);
         w.setWrapText(true);
+        w.setMaxWidth(Double.MAX_VALUE);
+        w.setMinWidth(0);
         g.add(l, 0, 0); g.add(w, 1, 0);
         VBox blk = new VBox(g);
         blk.setPadding(new Insets(1, seit, 1, seit));
@@ -562,7 +572,7 @@ public class KundenFenster {
     /** Tabellenzeile mit festen Spaltenanteilen als eigener Block. */
     private VBox zeileBlock(double innen, double seit, double[] proz, String[] werte, boolean kopf) {
         GridPane g = new GridPane();
-        g.setHgap(12);
+        g.setHgap(6);
         g.setPrefWidth(innen); g.setMaxWidth(innen);
         for (double p : proz) {
             javafx.scene.layout.ColumnConstraints cc = new javafx.scene.layout.ColumnConstraints();
@@ -572,6 +582,8 @@ public class KundenFenster {
         for (int c = 0; c < werte.length; c++) {
             Label l = new Label(werte[c] == null ? "" : werte[c]);
             l.setWrapText(true);
+            l.setMaxWidth(Double.MAX_VALUE);   // füllt die Spalte -> mehrzeiliger Umbruch statt „…"
+            l.setMinWidth(0);
             if (kopf) l.setStyle("-fx-font-weight: bold; -fx-text-fill: #006E9C;");
             g.add(l, c, 0);
         }
