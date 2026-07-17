@@ -112,6 +112,7 @@ public class TerminGenerator {
     private Set<Integer> wochenFuerPlan(String plan) {
         if (plan != null && plan.contains("1 und 3")) return Set.of(1, 3);
         if (plan != null && plan.contains("2 und 4")) return Set.of(2, 4);
+        if (plan != null && plan.toLowerCase().contains("monat")) return Set.of(1);   // Monatlich: 1× pro Monat
         return Set.of(1, 2, 3, 4, 5);   // Wöchentlich
     }
 

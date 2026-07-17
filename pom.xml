@@ -7,7 +7,7 @@
 
     <groupId>de.reinheit</groupId>
     <artifactId>KundenVerwaltung</artifactId>
-    <version>1.1.9</version>
+    <version>1.2.0</version>
     <packaging>jar</packaging>
 
     <name>KundenVerwaltung</name>
@@ -65,14 +65,6 @@
             <version>2.0.31</version>
         </dependency>
 
-        <!-- PDF-Berichte (optional): erst aktivieren, wenn DruckFenster OpenPDF nutzt,
-             und 'requires org.openpdf;' in module-info.java ergänzen.
-        <dependency>
-            <groupId>com.github.librepdf</groupId>
-            <artifactId>openpdf</artifactId>
-            <version>2.0.3</version>
-        </dependency>
-        -->
 
         <!-- JUnit 5 – Tests (mvn test) -->
         <dependency>
@@ -130,12 +122,7 @@
                 </configuration>
             </plugin>
 
-            <!--
-              Baut ein "Fat JAR" mit allen Abhängigkeiten (JavaFX, POI, SQLite):
-                  mvn clean package
-              Ergebnis: target/KundenVerwaltung-1.0.0-app.jar
-              Dieses JAR ist die Eingabe für jpackage (siehe BUILD.md).
-            -->
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>

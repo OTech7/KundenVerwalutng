@@ -80,6 +80,7 @@ public final class Database {
                 Id           INTEGER PRIMARY KEY AUTOINCREMENT,
                 Kundennummer INTEGER NOT NULL,
                 TerminDatum  TEXT    NOT NULL,
+                Uhrzeit      TEXT,
                 Dauer        REAL    DEFAULT 1.5,
                 Woche        TEXT,
                 Status       TEXT,
@@ -262,6 +263,13 @@ public final class Database {
                 st.execute("ALTER TABLE Termine ADD COLUMN Status TEXT");
             } catch (SQLException e) {
                 throw new RuntimeException("Spalte Status konnte nicht ergänzt werden", e);
+            }
+        }
+        if (!vorhanden.contains("Uhrzeit")) {
+            try (Statement st = get().createStatement()) {
+                st.execute("ALTER TABLE Termine ADD COLUMN Uhrzeit TEXT");
+            } catch (SQLException e) {
+                throw new RuntimeException("Spalte Uhrzeit konnte nicht ergänzt werden", e);
             }
         }
     }

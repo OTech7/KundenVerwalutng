@@ -5,6 +5,7 @@ public class Termin {
     private int    id;
     private int    kundennummer;
     private String terminDatum;   // ISO yyyy-MM-dd
+    private String uhrzeit;       // z. B. "10:00"
     private double dauer = 1.5;
     private String woche;
     /** Erledigt / Abgesagt / Nicht durchgeführt – leer, solange der Termin noch offen ist. */
@@ -28,6 +29,8 @@ public class Termin {
     public void   setKundennummer(int k) { this.kundennummer = k; }
     public String getTerminDatum() { return terminDatum; }
     public void   setTerminDatum(String d) { this.terminDatum = d; }
+    public String getUhrzeit() { return uhrzeit; }
+    public void   setUhrzeit(String u) { this.uhrzeit = u; }
     public double getDauer() { return dauer; }
     public void   setDauer(double d) { this.dauer = d; }
     public String getWoche() { return woche; }

@@ -497,13 +497,14 @@ public class KundenFenster {
 
         // ---- Termine des Kunden mit Status ----
         ziel.getChildren().add(druckBlock(abschnitt("Termine"), seit));
-        double[] tProz = {16, 18, 12, 18, 36};
+        double[] tProz = {14, 10, 16, 11, 15, 34};
         ziel.getChildren().add(zeileBlock(innen, seit, tProz,
-                new String[]{"Datum", "Wochentag", "Woche", "Status", "Notizen"}, true));
+                new String[]{"Datum", "Uhrzeit", "Wochentag", "Woche", "Status", "Notizen"}, true));
         var termine = new de.reinheit.kundenverwaltung.dao.TerminDao().finde(k.getKundennummer());
         for (var termin : termine) {
             ziel.getChildren().add(zeileBlock(innen, seit, tProz, new String[]{
                     Datum.anzeige(termin.getTerminDatum()),
+                    termin.getUhrzeit() == null ? "" : termin.getUhrzeit(),
                     termin.getWochentag(),
                     druckWert(termin.getWoche()),
                     termin.getStatus() == null ? "" : termin.getStatus(),

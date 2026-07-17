@@ -85,6 +85,7 @@ public class TermineFenster {
         tabelle.getColumns().setAll(
                 col("Kunde", "kundenName", 180),
                 datumCol("Termindatum", "terminDatum", 110),
+                col("Uhrzeit", "uhrzeit", 80),
                 col("Wochentag", "wochentag", 110),
                 col("Woche", "woche", 90),
                 col("Dauer (h)", "dauer", 80),
@@ -124,6 +125,9 @@ public class TermineFenster {
         datum.setConverter(Datum.konverter());
         try { datum.setValue(LocalDate.parse(t.getTerminDatum())); } catch (Exception ignored) {}
 
+        TextField uhrzeit = new TextField(t.getUhrzeit() == null ? "" : t.getUhrzeit());
+        uhrzeit.setPromptText("z. B. 10:00");
+        alsZeitFeld(uhrzeit);
         TextField dauer = new TextField(String.valueOf(t.getDauer()));
 
         ComboBox<String> status = new ComboBox<>(FXCollections.observableArrayList(
@@ -138,6 +142,7 @@ public class TermineFenster {
         g.setHgap(10); g.setVgap(10); g.setPadding(new Insets(14));
         int r = 0;
         g.addRow(r++, new Label("Termindatum (" + KundenFenster.DATUM_FORMAT + ")"), datum);
+        g.addRow(r++, new Label("Uhrzeit"), uhrzeit);
         g.addRow(r++, new Label("Dauer (Std.)"), dauer);
         g.addRow(r++, new Label("Status"), status);
         g.addRow(r++, new Label("Notizen"), notizen);
@@ -147,6 +152,8 @@ public class TermineFenster {
         ok.addEventFilter(javafx.event.ActionEvent.ACTION, ev -> {
             String fehler = null;
             if (datum.getValue() == null) fehler = "Bitte ein Termindatum wählen.";
+            else if (zeitNormalisieren(uhrzeit.getText()) == null)
+                fehler = "Bitte eine gültige Uhrzeit eingeben (z. B. 10:00).";
             else fehler = Eingabe.pruefeZahl(dauer.getText(), "Dauer", 0.25, 24);
             if (fehler != null) { Meldung.warnung(fehler); ev.consume(); }
         });
@@ -155,6 +162,8 @@ public class TermineFenster {
             if (bt != ButtonType.OK) return null;
             LocalDate d = datum.getValue();
             t.setTerminDatum(d.toString());
+            String zeit = zeitNormalisieren(uhrzeit.getText());
+            t.setUhrzeit(zeit == null ? "" : zeit);
             t.setWoche("Woche " + ((d.getDayOfMonth() - 1) / 7 + 1));   // Woche aus Datum neu berechnen
             Double du = Eingabe.zahl(dauer.getText());
             if (du != null) t.setDauer(du);
@@ -212,12 +221,13 @@ public class TermineFenster {
 
     /** Druckt die aktuell angezeigte (gefilterte) Terminliste. */
     private void drucken() {
-        String[] header = {"Kunde", "Datum", "Wochentag", "Woche", "Dauer", "Status"};
+        String[] header = {"Kunde", "Datum", "Uhrzeit", "Wochentag", "Woche", "Dauer", "Status"};
         java.util.List<String[]> rows = new java.util.ArrayList<>();
         for (Termin t : daten) {
             rows.add(new String[]{
                     t.getKundenName(),
                     Datum.anzeige(t.getTerminDatum()),
+                    t.getUhrzeit() == null ? "" : t.getUhrzeit(),
                     t.getWochentag(),
                     t.getWoche(),
                     t.getDauer() + " h",
@@ -256,7 +266,14 @@ public class TermineFenster {
             public String toString(Kunde k) { return k == null ? "" : "#" + k.getKundennummer() + " – " + k.getVollstaendigerName(); }
             public Kunde fromString(String s) { return null; }
         });
-        kunde.getSelectionModel().selectFirst();
+        // In der Terminliste gewählten Kunden vorauswählen (falls nicht „Alle Kunden")
+        Kunde vorauswahl = filter.getValue();
+        if (vorauswahl != null && vorauswahl.getKundennummer() != 0) {
+            kunden.stream().filter(x -> x.getKundennummer() == vorauswahl.getKundennummer())
+                    .findFirst().ifPresentOrElse(kunde::setValue, () -> kunde.getSelectionModel().selectFirst());
+        } else {
+            kunde.getSelectionModel().selectFirst();
+        }
 
         DatePicker von = new DatePicker(LocalDate.now());
         von.setPromptText(KundenFenster.DATUM_FORMAT);
@@ -267,8 +284,11 @@ public class TermineFenster {
         ComboBox<String> wochentag = new ComboBox<>(FXCollections.observableArrayList(
                 "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"));
         wochentag.setValue("Montag");
-        ComboBox<String> plan = new ComboBox<>(FXCollections.observableArrayList("Woche 1 und 3", "Woche 2 und 4", "Wöchentlich"));
+        ComboBox<String> plan = new ComboBox<>(FXCollections.observableArrayList("Woche 1 und 3", "Woche 2 und 4", "Wöchentlich", "Monatlich"));
         TextField dauer = new TextField("1.5");
+        TextField uhrzeit = new TextField();
+        uhrzeit.setPromptText("z. B. 10:00");
+        alsZeitFeld(uhrzeit);
 
         // Vorbelegung aus dem gewählten Kunden
         Runnable ausKunde = () -> {
@@ -290,6 +310,7 @@ public class TermineFenster {
         g.addRow(r++, new Label("Von (" + KundenFenster.DATUM_FORMAT + ")"), von);
         g.addRow(r++, new Label("Bis (" + KundenFenster.DATUM_FORMAT + ")"), bis);
         g.addRow(r++, new Label("Wochentag"), wochentag);
+        g.addRow(r++, new Label("Uhrzeit"), uhrzeit);
         g.addRow(r++, new Label("Plan"), plan);
         g.addRow(r++, new Label("Dauer je Termin (Std.)"), dauer);
         dlg.getDialogPane().setContent(g);
@@ -307,6 +328,8 @@ public class TermineFenster {
                                                fehler = "Der Zeitraum darf höchstens 5 Jahre umfassen.";
             else if (wochentag.getValue() == null) fehler = "Bitte einen Wochentag auswählen.";
             else if (plan.getValue() == null)  fehler = "Bitte einen Plan auswählen.";
+            else if (zeitNormalisieren(uhrzeit.getText()) == null)
+                                               fehler = "Bitte eine gültige Uhrzeit eingeben (z. B. 10:00).";
             else fehler = Eingabe.pruefeZahl(dauer.getText(), "Dauer je Termin", 0.25, 24);
             if (fehler != null) { Meldung.warnung(fehler); ev.consume(); }
         });
@@ -318,6 +341,9 @@ public class TermineFenster {
             double d = parsed != null ? parsed : 1.5;
             DayOfWeek tag = tagAus(wochentag.getValue());
             List<Termin> neu = new TerminGenerator().fuerZeitraum(k, von.getValue(), bis.getValue(), d, plan.getValue(), tag);
+            String zeit = zeitNormalisieren(uhrzeit.getText());
+            if (zeit == null) zeit = "";
+            for (Termin t : neu) t.setUhrzeit(zeit);
             if (neu.isEmpty()) {
                 new Alert(Alert.AlertType.INFORMATION, "Keine Termine im gewählten Zeitraum.").showAndWait();
             } else {
@@ -359,6 +385,51 @@ public class TermineFenster {
         if (s.contains("samstag") || s.contains("sonnabend")) return "Samstag";
         if (s.contains("sonntag"))    return "Sonntag";
         return null;
+    }
+
+    /**
+     * Macht aus einem Textfeld ein Uhrzeit-Feld: erlaubt beim Tippen nur Ziffern
+     * und „:" (Buchstaben werden sofort blockiert) und formatiert beim Verlassen
+     * automatisch zu „HH:mm" (z. B. „10" -> „10:00").
+     */
+    private static void alsZeitFeld(TextField tf) {
+        tf.setTextFormatter(new javafx.scene.control.TextFormatter<>(change ->
+                change.getControlNewText().matches("[0-9:]{0,5}") ? change : null));
+        tf.focusedProperty().addListener((obs, alt, hatFokus) -> {
+            if (!hatFokus) {
+                String norm = zeitNormalisieren(tf.getText());
+                if (norm != null && !norm.isEmpty()) tf.setText(norm);
+            }
+        });
+    }
+
+    /**
+     * Normalisiert eine Uhrzeit-Eingabe zu „HH:mm".
+     *   "10" -> "10:00", "1030" -> "10:30", "9:5" -> "09:05", "10.30" -> "10:30".
+     * Rückgabe: "" bei leerer Eingabe, null bei ungültiger Eingabe (z. B. Buchstaben).
+     */
+    static String zeitNormalisieren(String eingabe) {
+        if (eingabe == null) return "";
+        String s = eingabe.trim();
+        if (s.isEmpty()) return "";
+        // Trennzeichen (Punkt, Komma, h, u, Leerzeichen) zu ":" vereinheitlichen
+        s = s.replaceAll("[.,hHuU\\s]+", ":");
+        int stunde, minute;
+        if (s.contains(":")) {
+            String[] teile = s.split(":");
+            try {
+                stunde = Integer.parseInt(teile[0].trim());
+                minute = (teile.length > 1 && !teile[1].trim().isEmpty()) ? Integer.parseInt(teile[1].trim()) : 0;
+            } catch (Exception e) { return null; }
+        } else {
+            if (!s.matches("\\d+")) return null;
+            if (s.length() <= 2)       { stunde = Integer.parseInt(s); minute = 0; }
+            else if (s.length() == 3)  { stunde = Integer.parseInt(s.substring(0, 1)); minute = Integer.parseInt(s.substring(1)); }
+            else if (s.length() == 4)  { stunde = Integer.parseInt(s.substring(0, 2)); minute = Integer.parseInt(s.substring(2)); }
+            else return null;
+        }
+        if (stunde < 0 || stunde > 23 || minute < 0 || minute > 59) return null;
+        return String.format("%02d:%02d", stunde, minute);
     }
 
     public BorderPane getRoot() { return root; }

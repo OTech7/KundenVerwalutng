@@ -30,15 +30,16 @@ public class TerminDao {
 
     /** Speichert eine Liste erzeugter Termine (Batch). Gibt die Anzahl zurück. */
     public int speichern(List<Termin> termine) {
-        String sql = "INSERT INTO Termine (Kundennummer, TerminDatum, Dauer, Woche, Status, Notizen) VALUES (?,?,?,?,?,?)";
+        String sql = "INSERT INTO Termine (Kundennummer, TerminDatum, Uhrzeit, Dauer, Woche, Status, Notizen) VALUES (?,?,?,?,?,?,?)";
         try (PreparedStatement ps = Database.get().prepareStatement(sql)) {
             for (Termin t : termine) {
                 ps.setInt(1, t.getKundennummer());
                 ps.setString(2, t.getTerminDatum());
-                ps.setDouble(3, t.getDauer());
-                ps.setString(4, t.getWoche());
-                ps.setString(5, t.getStatus());
-                ps.setString(6, t.getNotizen());
+                ps.setString(3, t.getUhrzeit());
+                ps.setDouble(4, t.getDauer());
+                ps.setString(5, t.getWoche());
+                ps.setString(6, t.getStatus());
+                ps.setString(7, t.getNotizen());
                 ps.addBatch();
             }
             int[] r = ps.executeBatch();
@@ -81,14 +82,15 @@ public class TerminDao {
 
     /** Aktualisiert Datum, Dauer, Woche, Status und Notizen eines Termins. */
     public void aktualisieren(Termin t) {
-        String sql = "UPDATE Termine SET TerminDatum=?, Dauer=?, Woche=?, Status=?, Notizen=? WHERE Id=?";
+        String sql = "UPDATE Termine SET TerminDatum=?, Uhrzeit=?, Dauer=?, Woche=?, Status=?, Notizen=? WHERE Id=?";
         try (PreparedStatement ps = Database.get().prepareStatement(sql)) {
             ps.setString(1, t.getTerminDatum());
-            ps.setDouble(2, t.getDauer());
-            ps.setString(3, t.getWoche());
-            ps.setString(4, t.getStatus());
-            ps.setString(5, t.getNotizen());
-            ps.setInt(6, t.getId());
+            ps.setString(2, t.getUhrzeit());
+            ps.setDouble(3, t.getDauer());
+            ps.setString(4, t.getWoche());
+            ps.setString(5, t.getStatus());
+            ps.setString(6, t.getNotizen());
+            ps.setInt(7, t.getId());
             ps.executeUpdate();
             AuditService.log("Bearbeitet", "Termin", "Nr. " + t.getId() + " · " + t.getStatus());
         } catch (SQLException e) {
@@ -101,6 +103,7 @@ public class TerminDao {
         t.setId(rs.getInt("Id"));
         t.setKundennummer(rs.getInt("Kundennummer"));
         t.setTerminDatum(rs.getString("TerminDatum"));
+        t.setUhrzeit(rs.getString("Uhrzeit"));
         t.setDauer(rs.getDouble("Dauer"));
         t.setWoche(rs.getString("Woche"));
         t.setStatus(rs.getString("Status"));
